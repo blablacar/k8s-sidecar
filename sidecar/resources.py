@@ -158,10 +158,9 @@ def _watch_resource_iterator(label, labelValue, targetFolder, url, method, paylo
 
 
 def _watch_resource_loop(mode, *args):
+    errorThrottleSleep = os.getenv("ERROR_THROTTLE_SLEEP", 5)
     while True:
         try:
-            # Always wait to slow down the loop in case of exceptions
-            sleep(os.getenv("ERROR_THROTTLE_SLEEP", 5))
             if mode == "SLEEP":
                 listResources(*args)
                 sleep(os.getenv("SLEEP_TIME", 60))
@@ -170,14 +169,18 @@ def _watch_resource_loop(mode, *args):
         except ApiException as e:
             if e.status != 500:
                 print(f"{timestamp()} ApiException when calling kubernetes: {e}\n")
+                sleep(errorThrottleSleep)
             else:
                 raise
         except ProtocolError as e:
             print(f"{timestamp()} ProtocolError when calling kubernetes: {e}\n")
+            sleep(errorThrottleSleep)
         except MaxRetryError as e:
             print(f"{timestamp()} MaxRetryError when calling kubernetes: {e}\n")
+            sleep(errorThrottleSleep)
         except Exception as e:
             print(f"{timestamp()} Received unknown exception: {e}\n")
+            sleep(errorThrottleSleep)
 
 
 def watchForChanges(mode, label, labelValue, targetFolder, url, method, payload,
